@@ -6,4 +6,13 @@
     <string name="streaming">Streaming : 16fps</string>
     <string name="nodes">Connected Nodes : 3</string>
     <string name="status">Sending Status : Good</string>
+
+    <string name="btn_server">Server</string>
+    <string name="btn_streaming">Video Streaming</string>
+    <string name="btn_nodeInfo">Node Info</string>
+
+    <string name="btn_landing">Landing</string>
+
+    <string name="btn_up">▲</string>
+    <string name="btn_down">▼</string>
 </resources>

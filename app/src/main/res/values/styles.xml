@@ -5,4 +5,8 @@
         <!-- Customize your theme here. -->
     </style>
 
+    <style name="ButtonNoDefaultPadding">
+        <item name="android:minWidth">0dp</item> <item name="android:minHeight">0dp</item>
+    </style>
+
 </resources>
