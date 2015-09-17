@@ -12,7 +12,10 @@
     <string name="btn_nodeInfo">Node Info</string>
 
     <string name="btn_landing">Landing</string>
+    <string name="btn_takeOff">Take Off</string>
 
     <string name="btn_up">▲</string>
     <string name="btn_down">▼</string>
+    <string name="btn_left">◀</string>
+    <string name="btn_right">▶</string>
 </resources>

@@ -59,6 +59,7 @@
     </LinearLayout>
 
     <LinearLayout
+        android:id="@+id/layout_leftController"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentLeft="true"
@@ -81,24 +82,38 @@
     </LinearLayout>
 
     <Button
+        android:id="@+id/btn_ctrl_landing"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_centerHorizontal="true"
         android:layout_centerVertical="true"
         android:layout_alignParentBottom="true"
-        android:text="@string/btn_landing" />
+        android:text="@string/btn_takeOff"
+        android:textStyle="bold"/>
 
-    <LinearLayout
+    <RelativeLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_alignTop="@id/layout_leftController"
+        android:layout_alignBottom="@id/layout_leftController"
         android:layout_alignParentRight="true"
         android:layout_alignParentBottom="true"
         android:layout_marginRight="50dp"
-        android:orientation="vertical">
+        android:orientation="horizontal">
 
         <Button
+            android:id="@+id/btn_right_left"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:text="@string/btn_left"
+            android:textSize="30sp" />
+
+        <Button
+            android:id="@+id/btn_right_up"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toRightOf="@id/btn_right_left"
             android:layout_marginBottom="20dp"
             android:text="@string/btn_up"
             android:textSize="30sp" />
@@ -106,7 +121,18 @@
         <Button
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp"
+            android:layout_toRightOf="@id/btn_right_up"
+            android:layout_centerVertical="true"
+            android:text="@string/btn_right"
+            android:textSize="30sp" />
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toRightOf="@id/btn_right_left"
+            android:layout_alignParentBottom="true"
             android:text="@string/btn_down"
             android:textSize="30sp" />
-    </LinearLayout>
+    </RelativeLayout>
 </RelativeLayout>

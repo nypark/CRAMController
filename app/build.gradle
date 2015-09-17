@@ -22,4 +22,21 @@ android {
 dependencies {
     compile fileTree(include: ['*.jar'], dir: 'libs')
     compile 'com.android.support:appcompat-v7:19.1.0'
+    compile files('libs/ARSDK3_Android_3_6/jmdns.jar')
+    compile files('libs/ARSDK3_Android_3_6/libARCommands.jar')
+    compile files('libs/ARSDK3_Android_3_6/libARController.jar')
+    compile files('libs/ARSDK3_Android_3_6/libARDataTransfer.jar')
+    compile files('libs/ARSDK3_Android_3_6/libARDiscovery.jar')
+    compile files('libs/ARSDK3_Android_3_6/libARMavlink.jar')
+    compile files('libs/ARSDK3_Android_3_6/libARMedia.jar')
+    compile files('libs/ARSDK3_Android_3_6/libARNetwork.jar')
+    compile files('libs/ARSDK3_Android_3_6/libARNetworkAL.jar')
+    compile files('libs/ARSDK3_Android_3_6/libARSAL.jar')
+    compile files('libs/ARSDK3_Android_3_6/libARStream.jar')
+    compile files('libs/ARSDK3_Android_3_6/libARUpdater.jar')
+    compile files('libs/ARSDK3_Android_3_6/libARUtils.jar')
+    compile files('libs/ARSDK3_Android_3_6/libcurl.jar')
+    compile files('libs/ARSDK3_Android_3_6/libjson.jar')
+    compile files('libs/ARSDK3_Android_3_6/libopenssl.jar')
+    compile files('libs/ARSDK3_Android_3_6/sanselan-0.97-incubator.jar')
 }
