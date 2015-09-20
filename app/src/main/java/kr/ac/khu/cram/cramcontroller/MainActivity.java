@@ -1,13 +1,17 @@
 package kr.ac.khu.cram.cramcontroller;
 
 import android.app.Activity;
+import android.app.ProgressDialog;
+import android.content.DialogInterface;
 import android.content.ServiceConnection;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.Toast;
 
 import com.parrot.arsdk.ardiscovery.ARDiscoveryService;
 
@@ -43,18 +47,27 @@ public class MainActivity extends Activity {
         }
     }
 
-    private ARDiscoveryService mArdiscoveryService;
-    private ServiceConnection mArdiscoveryServiceConnection;
-
-    View.OnClickListener landingCtrlClickListener = new View.OnClickListener() {
+    View.OnClickListener btnClickListener = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
 
-            if (R.id.btn_ctrl_landing == v.getId()) {
-                if (((Button) v).getText() == getString(R.string.btn_landing))
-                    ((Button) v).setText(R.string.btn_takeOff);
-                else if (((Button) v).getText() == getString(R.string.btn_takeOff))
-                    ((Button) v).setText(R.string.btn_landing);
+            Button btn_this = (Button)v;
+
+            switch (v.getId()) {
+                case R.id.btn_ctrl_landing :
+                    if ((btn_this).getText() == getString(R.string.btn_landing))
+                        (btn_this).setText(R.string.btn_takeOff);
+                    else if ((btn_this).getText() == getString(R.string.btn_takeOff))
+                        (btn_this).setText(R.string.btn_landing);
+                    break;
+                case R.id.btn_server :
+                    MyProgressDialog myProgressDialog;
+
+                    Toast.makeText(MainActivity.this, "Start server", Toast.LENGTH_SHORT).show();
+
+                    myProgressDialog = new MyProgressDialog();
+                    myProgressDialog.execute();
+                    break;
             }
         }
     };
@@ -64,8 +77,13 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Button btn = (Button) findViewById(R.id.btn_ctrl_landing);
-        btn.setOnClickListener(landingCtrlClickListener);
+        Button btn_landing = (Button) findViewById(R.id.btn_ctrl_landing);
+        btn_landing.setOnClickListener(btnClickListener);
+
+        Button btn_server = (Button) findViewById(R.id.btn_server);
+        btn_server.setOnClickListener(btnClickListener);
+
+        BebopHelper bHelper = new BebopHelper(this);
 
     }
 
@@ -89,5 +107,59 @@ public class MainActivity extends Activity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    class MyProgressDialog extends AsyncTask<Void, Integer, Void> {
+        boolean running;
+        ProgressDialog progressDialog;
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            running = true;
+
+            progressDialog = ProgressDialog.show(MainActivity.this, "ProgressDialog", "Wait!");
+
+            progressDialog.setCanceledOnTouchOutside(true);
+            progressDialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
+                @Override
+                public void onCancel(DialogInterface dialog) {
+                    running = false;
+                }
+            });
+
+            Toast.makeText(MainActivity.this, "Progress Start", Toast.LENGTH_SHORT).show();
+        }
+
+        @Override
+        protected Void doInBackground(Void... params) {
+            int i=5;
+            while(running) {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                if(i-- == 0)
+                    running = false;
+
+                publishProgress(i);
+            }
+            return null;
+        }
+
+        @Override
+        protected void onProgressUpdate(Integer... values) {
+            super.onProgressUpdate(values);
+            progressDialog.setMessage(String.valueOf(values[0]));
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            super.onPostExecute(aVoid);
+            Toast.makeText(MainActivity.this, "Progress Ended", Toast.LENGTH_SHORT).show();
+            progressDialog.dismiss();
+        }
     }
 }

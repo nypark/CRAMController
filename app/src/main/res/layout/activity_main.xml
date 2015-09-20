@@ -40,6 +40,7 @@
         android:orientation="vertical">
 
         <Button style="@style/ButtonNoDefaultPadding"
+            android:id="@+id/btn_server"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/btn_server"
@@ -68,6 +69,7 @@
         android:orientation="vertical">
 
         <Button
+            android:id="@+id/btn_go_up"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginBottom="20dp"
@@ -75,6 +77,7 @@
             android:textSize="30sp" />
 
         <Button
+            android:id="@+id/btn_go_down"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/btn_down"
@@ -102,7 +105,7 @@
         android:orientation="horizontal">
 
         <Button
-            android:id="@+id/btn_right_left"
+            android:id="@+id/btn_turn_left"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
@@ -110,27 +113,29 @@
             android:textSize="30sp" />
 
         <Button
-            android:id="@+id/btn_right_up"
+            android:id="@+id/btn_go_front"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_toRightOf="@id/btn_right_left"
+            android:layout_toRightOf="@id/btn_turn_left"
             android:layout_marginBottom="20dp"
             android:text="@string/btn_up"
             android:textSize="30sp" />
 
         <Button
+            android:id="@+id/btn_turn_right"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginBottom="20dp"
-            android:layout_toRightOf="@id/btn_right_up"
+            android:layout_toRightOf="@id/btn_go_front"
             android:layout_centerVertical="true"
             android:text="@string/btn_right"
             android:textSize="30sp" />
 
         <Button
+            android:id="@+id/btn_go_back"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_toRightOf="@id/btn_right_left"
+            android:layout_toRightOf="@id/btn_turn_left"
             android:layout_alignParentBottom="true"
             android:text="@string/btn_down"
             android:textSize="30sp" />
