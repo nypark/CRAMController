@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.ServiceConnection;
+import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
@@ -115,6 +116,10 @@ public class MainActivity extends Activity {
 
         @Override
         protected void onPreExecute() {
+            //Change button background color to green
+            Button btn_server = (Button)findViewById(R.id.btn_server);
+            btn_server.setBackgroundColor(Color.GREEN);
+
             super.onPreExecute();
             running = true;
 
@@ -157,6 +162,10 @@ public class MainActivity extends Activity {
 
         @Override
         protected void onPostExecute(Void aVoid) {
+            //Change button background color to default
+            Button btn_server = (Button)findViewById(R.id.btn_server);
+            btn_server.setBackgroundResource(android.R.drawable.btn_default);
+
             super.onPostExecute(aVoid);
             Toast.makeText(MainActivity.this, "Progress Ended", Toast.LENGTH_SHORT).show();
             progressDialog.dismiss();
