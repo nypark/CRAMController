@@ -21,7 +21,7 @@ import com.parrot.arsdk.ardiscovery.receivers.ARDiscoveryServicesDevicesListUpda
 import java.util.List;
 
 /**
- * Created by Na-yeon Park on 2015-09-18.
+ * Created by Na-yeon Park on 2015-09-18.dfsdfsdf
  */
 public class BebopHelper extends MainActivity{
 
