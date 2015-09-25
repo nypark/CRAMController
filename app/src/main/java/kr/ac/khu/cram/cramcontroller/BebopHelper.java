@@ -1,14 +1,19 @@
 package kr.ac.khu.cram.cramcontroller;
 
+import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.os.IBinder;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
+import android.view.SurfaceView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -40,20 +45,23 @@ import java.util.List;
 public class BebopHelper implements ARDiscoveryServicesDevicesListUpdatedReceiverDelegate {
 
     public static final String TAG = "KRAMController";
-
+    public ServiceConnection mArdiscoveryServiceConnection = null;
     private Context mContext;
     private ARDiscoveryDevice arDevice;
     private ARDeviceController arController;
-
     private ARDiscoveryService mArdiscoveryService;
-    private ServiceConnection mArdiscoveryServiceConnection;
     private BroadcastReceiver mArdiscoveryServicesDevicesListUpdatedReceiver;
 
-    public BebopHelper(Context ctx){
+    public BebopHelper(Context ctx) {
         mContext = ctx;
     }
 
+    public ARDeviceController getArController() {
+        return arController;
+    }
+
     public void initDiscoveryService() {
+
         // create the service connection
         if (mArdiscoveryServiceConnection == null) {
             mArdiscoveryServiceConnection = new ServiceConnection() {
@@ -87,27 +95,24 @@ public class BebopHelper implements ARDiscoveryServicesDevicesListUpdatedReceive
         }
     }
 
-    public void registerReceivers()
-    {
+    public void registerReceivers() {
         mArdiscoveryServicesDevicesListUpdatedReceiver = new ARDiscoveryServicesDevicesListUpdatedReceiver(this);
         LocalBroadcastManager localBroadcastMgr = LocalBroadcastManager.getInstance(mContext);
         localBroadcastMgr.registerReceiver(mArdiscoveryServicesDevicesListUpdatedReceiver, new IntentFilter(ARDiscoveryService.kARDiscoveryServiceNotificationServicesDevicesListUpdated));
     }
 
     @Override
-    public void onServicesDevicesListUpdated()
-    {
+    public void onServicesDevicesListUpdated() {
         Log.d(TAG, "onServicesDevicesListUpdated ...");
 
-        if (mArdiscoveryService != null)
-        {
+        if (mArdiscoveryService != null) {
             List<ARDiscoveryDeviceService> deviceList = mArdiscoveryService.getDeviceServicesArray();
 
             // Do what you want with the device list
             /*for (ARDiscoveryDeviceService device:deviceList) {
                 Toast.makeText(mContext, device.getName(), Toast.LENGTH_SHORT).show();
             }*/
-            if(deviceList.size() > 0) {
+            if (deviceList.size() > 0) {
                 try {
                     mArdiscoveryService.stop();
 
@@ -117,77 +122,10 @@ public class BebopHelper implements ARDiscoveryServicesDevicesListUpdatedReceive
 
                     Toast.makeText(mContext, deviceList.get(0).getName(), Toast.LENGTH_SHORT).show();
 
-                    arController.addListener(new ARDeviceControllerListener() {
-                        @Override
-                        public void onStateChanged(ARDeviceController arDeviceController, ARCONTROLLER_DEVICE_STATE_ENUM arcontroller_device_state_enum, ARCONTROLLER_ERROR_ENUM arcontroller_error_enum) {
-                            TextView deviceState = (TextView) ((MainActivity) mContext).findViewById(R.id.txt_deviceStatus);
 
-                            switch (arcontroller_device_state_enum) {
-                                case ARCONTROLLER_DEVICE_STATE_RUNNING:
-                                    deviceState.setText("RUNNING");
-                                    break;
-                                case ARCONTROLLER_DEVICE_STATE_STOPPED:
-                                    deviceState.setText("STOP");
-                                    break;
-                                case ARCONTROLLER_DEVICE_STATE_STARTING:
-                                    deviceState.setText("STARTING");
-                                    break;
-                                case ARCONTROLLER_DEVICE_STATE_STOPPING:
-                                    deviceState.setText("STOPPING");
-                                    break;
-
-                                default:
-                                    deviceState.setText("STOP");
-                                    break;
-                            }
-                        }
-
-                        @Override
-                        public void onCommandReceived(ARDeviceController arDeviceController, ARCONTROLLER_DICTIONARY_KEY_ENUM arcontroller_dictionary_key_enum, ARControllerDictionary arControllerDictionary) {
-                            if (arControllerDictionary != null) {
-                                Log.i(TAG, "Enum : " + arcontroller_dictionary_key_enum);
-                                // if the command received is a battery state changed
-                                if (arcontroller_dictionary_key_enum == ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_COMMON_COMMONSTATE_BATTERYSTATECHANGED) {
-                                    ARControllerArgumentDictionary<Object> args = arControllerDictionary.get(ARControllerDictionary.ARCONTROLLER_DICTIONARY_SINGLE_KEY);
-
-                                    if (args != null) {
-                                        Integer batValue = (Integer) args.get(ARFeatureCommon.ARCONTROLLER_DICTIONARY_KEY_COMMON_COMMONSTATE_BATTERYSTATECHANGED_PERCENT);
-
-
-                                        // do what you want with the battery level
-                                        Log.i(TAG, "Battery : " + batValue);
-                                    }
-                                } else if (arcontroller_dictionary_key_enum == ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_COMMON_COMMONSTATE_CURRENTTIMECHANGED) {
-                                    ARControllerArgumentDictionary<Object> args = arControllerDictionary.get(ARControllerDictionary.ARCONTROLLER_DICTIONARY_SINGLE_KEY);
-
-                                    if (args != null) {
-                                        String batValue = (String)args.get(ARFeatureCommon.ARCONTROLLER_DICTIONARY_KEY_COMMON_COMMONSTATE_CURRENTTIMECHANGED_TIME);
-
-
-                                        // do what you want with the battery level
-                                        Log.i(TAG, "Time : " + batValue);
-                                    }
-                                }
-                            } else {
-                                Log.e(TAG, "elementDictionary is null");
-                            }
-                        }
-                    });
-
-                    arController.addStreamListener(new ARDeviceControllerStreamListener() {
-                        @Override
-                        public void onFrameReceived(ARDeviceController arDeviceController, ARFrame arFrame) {
-                            Log.i(TAG, "arFrame Size : " + arFrame.getDataSize());
-                        }
-
-                        @Override
-                        public void onFrameTimeout(ARDeviceController arDeviceController) {
-
-                        }
-                    });
 
                     ARCONTROLLER_ERROR_ENUM error = arController.start();
-                    if(error != null)
+                    if (error != null)
                         Log.e(TAG, error.toString());
 
                 } catch (ARControllerException e) {
@@ -197,23 +135,18 @@ public class BebopHelper implements ARDiscoveryServicesDevicesListUpdatedReceive
         }
     }
 
-    private ARDiscoveryDevice createDiscoveryDevice(ARDiscoveryDeviceService service)
-    {
+    private ARDiscoveryDevice createDiscoveryDevice(ARDiscoveryDeviceService service) {
         ARDiscoveryDevice device = null;
         if ((service != null) &&
-                (ARDISCOVERY_PRODUCT_ENUM.ARDISCOVERY_PRODUCT_ARDRONE.equals(ARDiscoveryService.getProductFromProductID(service.getProductID()))))
-        {
-            try
-            {
+                (ARDISCOVERY_PRODUCT_ENUM.ARDISCOVERY_PRODUCT_ARDRONE.equals(ARDiscoveryService.getProductFromProductID(service.getProductID())))) {
+            try {
                 device = new ARDiscoveryDevice();
 
                 ARDiscoveryDeviceNetService netDeviceService = (ARDiscoveryDeviceNetService) service.getDevice();
 
                 device.initWifi(ARDISCOVERY_PRODUCT_ENUM.ARDISCOVERY_PRODUCT_ARDRONE, netDeviceService.getName(), netDeviceService.getIp(), netDeviceService.getPort());
 
-            }
-            catch (ARDiscoveryException e)
-            {
+            } catch (ARDiscoveryException e) {
                 e.printStackTrace();
                 Log.e(TAG, "Error: " + e.getError());
             }
@@ -223,23 +156,19 @@ public class BebopHelper implements ARDiscoveryServicesDevicesListUpdatedReceive
     }
 
     //Clean Everything
-    private void unregisterReceivers()
-    {
+    public void unregisterReceivers() {
         LocalBroadcastManager localBroadcastMgr = LocalBroadcastManager.getInstance(mContext);
 
         localBroadcastMgr.unregisterReceiver(mArdiscoveryServicesDevicesListUpdatedReceiver);
     }
 
-    private void closeServices()
-    {
+    public void closeServices() {
         Log.d(TAG, "closeServices ...");
 
-        if (mArdiscoveryService != null)
-        {
+        if (mArdiscoveryService != null) {
             new Thread(new Runnable() {
                 @Override
-                public void run()
-                {
+                public void run() {
                     mArdiscoveryService.stop();
 
                     mContext.unbindService(mArdiscoveryServiceConnection);
