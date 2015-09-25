@@ -3,7 +3,6 @@ package kr.ac.khu.cram.cramcontroller;
 import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
-import android.content.ServiceConnection;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
@@ -11,9 +10,8 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
-
-import com.parrot.arsdk.ardiscovery.ARDiscoveryService;
 
 public class MainActivity extends Activity {
 
@@ -51,16 +49,16 @@ public class MainActivity extends Activity {
         @Override
         public void onClick(View v) {
 
-            Button btn_this = (Button)v;
+            Button btn_this = (Button) v;
 
             switch (v.getId()) {
-                case R.id.btn_ctrl_landing :
+                case R.id.btn_ctrl_landing:
                     if ((btn_this).getText() == getString(R.string.btn_landing))
                         (btn_this).setText(R.string.btn_takeOff);
                     else if ((btn_this).getText() == getString(R.string.btn_takeOff))
                         (btn_this).setText(R.string.btn_landing);
                     break;
-                case R.id.btn_server :
+                case R.id.btn_server:
                     MyProgressDialog myProgressDialog;
 
                     Toast.makeText(MainActivity.this, "Start server", Toast.LENGTH_SHORT).show();
@@ -84,7 +82,8 @@ public class MainActivity extends Activity {
         btn_server.setOnClickListener(btnClickListener);
 
         BebopHelper bHelper = new BebopHelper(this);
-
+        bHelper.registerReceivers();
+        bHelper.initDiscoveryService();
     }
 
     @Override
@@ -133,15 +132,15 @@ public class MainActivity extends Activity {
 
         @Override
         protected Void doInBackground(Void... params) {
-            int i=5;
-            while(running) {
+            int i = 5;
+            while (running) {
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
 
-                if(i-- == 0)
+                if (i-- == 0)
                     running = false;
 
                 publishProgress(i);
