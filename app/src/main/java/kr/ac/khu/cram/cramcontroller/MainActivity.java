@@ -4,18 +4,20 @@ import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.media.MediaCodec;
 import android.media.MediaFormat;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.widget.Button;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -32,10 +34,14 @@ import com.parrot.arsdk.arcontroller.ARFrame;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements SurfaceHolder.Callback {
 
     public static final String TAG = "KRAMController";
+
+    private ARDeviceController arController;
+    private BebopHelper bHelper;
 
     // video vars
     private static final String VIDEO_MIME_TYPE = "video/avc";
@@ -48,7 +54,7 @@ public class MainActivity extends Activity {
     private boolean isCodecConfigured = false;
     private ByteBuffer csdBuffer;
     private boolean waitForIFrame = true;
-    private ByteBuffer [] buffers;
+    private ByteBuffer[] buffers;
 
     static {
         try {
@@ -78,7 +84,6 @@ public class MainActivity extends Activity {
         }
     }
 
-    public BebopHelper bHelper;
     View.OnClickListener btnClickListener = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
@@ -103,10 +108,6 @@ public class MainActivity extends Activity {
             }
         }
     };
-    private ARDeviceController arController;
-    private SurfaceView mSurfaceView;
-    private Bitmap mBitmap;
-    private Canvas mCanvas;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -119,10 +120,13 @@ public class MainActivity extends Activity {
         Button btn_server = (Button) findViewById(R.id.btn_server);
         btn_server.setOnClickListener(btnClickListener);
 
+        sfView = (SurfaceView) findViewById(R.id.surface_stream);
+
         bHelper = new BebopHelper(this);
         bHelper.registerReceivers();
         bHelper.initDiscoveryService();
 
+        initVideoVars();
     }
 
     @Override
@@ -264,17 +268,64 @@ public class MainActivity extends Activity {
             arController.addStreamListener(new ARDeviceControllerStreamListener() {
                 @Override
                 public void onFrameReceived(ARDeviceController arDeviceController, final ARFrame frame) {
-                    if(frame != null && frame.isIFrame()){
-                        byte[] tmpByteArray = frame.getByteData();
-                        if(tmpByteArray != null && tmpByteArray.length > 0){
-                            Bitmap bmp;
-                            BitmapFactory.Options options = new BitmapFactory.Options();
-                            options.inMutable = true;
-                            bmp = BitmapFactory.decodeByteArray(tmpByteArray, 0, tmpByteArray.length, options);
-                            mCanvas = new Canvas(bmp);
-                            mSurfaceView.draw(mCanvas);
+                    readyLock.lock();
+
+                    if ((mediaCodec != null)) {
+                        if (!isCodecConfigured && frame.isIFrame()) {
+                            csdBuffer = getCSD(frame);
+                            if (csdBuffer != null) {
+                                configureMediaCodec();
+                            }
+                        }
+                        if (isCodecConfigured && (!waitForIFrame || frame.isIFrame())) {
+                            waitForIFrame = false;
+
+                            // Here we have either a good PFrame, or an IFrame
+                            int index = -1;
+
+                            try {
+                                index = mediaCodec.dequeueInputBuffer(VIDEO_DEQUEUE_TIMEOUT);
+                            } catch (IllegalStateException e) {
+                                Log.e(TAG, "Error while dequeue input buffer");
+                            }
+                            if (index >= 0) {
+                                ByteBuffer b = buffers[index];
+                                b.clear();
+                                b.put(frame.getByteData(), 0, frame.getDataSize());
+                                //ByteBufferDumper.dumpBufferStartEnd("PFRAME", b, 10, 4);
+                                int flag = 0;
+                                if (frame.isIFrame()) {
+                                    //flag = MediaCodec.BUFFER_FLAG_SYNC_FRAME | MediaCodec.BUFFER_FLAG_CODEC_CONFIG;
+                                }
+
+                                try {
+                                    mediaCodec.queueInputBuffer(index, 0, frame.getDataSize(), 0, flag);
+                                } catch (IllegalStateException e) {
+                                    Log.e(TAG, "Error while queue input buffer");
+                                }
+
+                            } else {
+                                waitForIFrame = true;
+                            }
+                        }
+
+                        // Try to display previous frame
+                        MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
+                        int outIndex = -1;
+                        try {
+                            outIndex = mediaCodec.dequeueOutputBuffer(info, 0);
+
+                            while (outIndex >= 0) {
+                                mediaCodec.releaseOutputBuffer(outIndex, true);
+                                outIndex = mediaCodec.dequeueOutputBuffer(info, 0);
+                            }
+                        } catch (IllegalStateException e) {
+                            Log.e(TAG, "Error while dequeue input buffer (outIndex)");
                         }
                     }
+
+
+                    readyLock.unlock();
                 }
 
                 @Override
@@ -285,4 +336,122 @@ public class MainActivity extends Activity {
             });
         }
     }
+
+
+    //region video
+    public void initVideoVars() {
+        readyLock = new ReentrantLock();
+        applySetupVideo();
+    }
+
+    private void applySetupVideo() {
+        String deviceModel = Build.DEVICE;
+        Log.d(TAG, "configuring HW video codec for device: [" + deviceModel + "]");
+        sfView.setLayoutParams(new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT));
+        sfView.getHolder().addCallback(this);
+    }
+
+/*    public void reset() {
+        *//* This will be run either before or after decoding a frame. *//*
+        readyLock.lock();
+
+        view.removeView(sfView);
+        sfView = null;
+
+        releaseMediaCodec();
+
+        readyLock.unlock();
+    }*/
+
+    /**
+     * Configure and start media codec
+     *
+     * @param type
+     */
+    private void initMediaCodec(String type) {
+        mediaCodec = MediaCodec.createDecoderByType(type);
+
+        if (csdBuffer != null) {
+            configureMediaCodec();
+        }
+    }
+
+    private void configureMediaCodec() {
+        MediaFormat format = MediaFormat.createVideoFormat("video/avc", VIDEO_WIDTH, VIDEO_HEIGHT);
+        format.setByteBuffer("csd-0", csdBuffer);
+
+        mediaCodec.configure(format, sfView.getHolder().getSurface(), null, 0);
+        mediaCodec.start();
+
+        buffers = mediaCodec.getInputBuffers();
+
+        isCodecConfigured = true;
+    }
+
+    private void releaseMediaCodec() {
+        if ((mediaCodec != null) && (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN)) {
+            if (isCodecConfigured) {
+                mediaCodec.stop();
+                mediaCodec.release();
+            }
+            isCodecConfigured = false;
+            mediaCodec = null;
+        }
+    }
+
+    public ByteBuffer getCSD(ARFrame frame) {
+        int spsSize = -1;
+        if (frame.isIFrame()) {
+            byte[] data = frame.getByteData();
+            int searchIndex = 0;
+            // we'll need to search the "00 00 00 01" pattern to find each header size
+            // Search start at index 4 to avoid finding the SPS "00 00 00 01" tag
+            for (searchIndex = 4; searchIndex <= frame.getDataSize() - 4; searchIndex++) {
+                if (0 == data[searchIndex] &&
+                        0 == data[searchIndex + 1] &&
+                        0 == data[searchIndex + 2] &&
+                        1 == data[searchIndex + 3]) {
+                    break;  // PPS header found
+                }
+            }
+            spsSize = searchIndex;
+
+            // Search start at index 4 to avoid finding the PSS "00 00 00 01" tag
+            for (searchIndex = spsSize + 4; searchIndex <= frame.getDataSize() - 4; searchIndex++) {
+                if (0 == data[searchIndex] &&
+                        0 == data[searchIndex + 1] &&
+                        0 == data[searchIndex + 2] &&
+                        1 == data[searchIndex + 3]) {
+                    break;  // frame header found
+                }
+            }
+            int csdSize = searchIndex;
+
+            byte[] csdInfo = new byte[csdSize];
+            System.arraycopy(data, 0, csdInfo, 0, csdSize);
+            return ByteBuffer.wrap(csdInfo);
+        }
+        return null;
+    }
+
+    @Override
+    public void surfaceCreated(SurfaceHolder holder) {
+        readyLock.lock();
+        initMediaCodec(VIDEO_MIME_TYPE);
+        readyLock.unlock();
+    }
+
+    @Override
+    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+
+    }
+
+    @Override
+    public void surfaceDestroyed(SurfaceHolder holder) {
+        readyLock.lock();
+        releaseMediaCodec();
+        readyLock.unlock();
+    }
+    //endregion video
+
 }

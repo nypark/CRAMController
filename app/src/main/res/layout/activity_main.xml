@@ -5,7 +5,7 @@
     tools:context=".MainActivity">
 
     <SurfaceView
-        android:id="@+id/surface_video"
+        android:id="@+id/surface_stream"
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
 
