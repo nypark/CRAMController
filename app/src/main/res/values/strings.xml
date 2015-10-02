@@ -3,7 +3,7 @@
 
     <string name="action_settings">Settings</string>
 
-    <string name="streaming">Streaming : 16fps</string>
+    <string name="streaming">Streaming : 0fps</string>
     <string name="nodes">Connected Nodes : 3</string>
     <string name="status">Sending Status : Good</string>
 

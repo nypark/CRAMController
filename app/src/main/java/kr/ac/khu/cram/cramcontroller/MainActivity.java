@@ -21,6 +21,7 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.parrot.arsdk.arcommands.ARCOMMANDS_ARDRONE3_PILOTINGSTATE_FLYINGSTATECHANGED_STATE_ENUM;
 import com.parrot.arsdk.arcontroller.ARCONTROLLER_DEVICE_STATE_ENUM;
 import com.parrot.arsdk.arcontroller.ARCONTROLLER_DICTIONARY_KEY_ENUM;
 import com.parrot.arsdk.arcontroller.ARCONTROLLER_ERROR_ENUM;
@@ -29,10 +30,16 @@ import com.parrot.arsdk.arcontroller.ARControllerDictionary;
 import com.parrot.arsdk.arcontroller.ARDeviceController;
 import com.parrot.arsdk.arcontroller.ARDeviceControllerListener;
 import com.parrot.arsdk.arcontroller.ARDeviceControllerStreamListener;
+import com.parrot.arsdk.arcontroller.ARFeatureARDrone3;
 import com.parrot.arsdk.arcontroller.ARFeatureCommon;
 import com.parrot.arsdk.arcontroller.ARFrame;
+import com.parrot.arsdk.arsal.ARSALPrint;
+
+import org.w3c.dom.Text;
 
 import java.nio.ByteBuffer;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -55,6 +62,12 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
     private ByteBuffer csdBuffer;
     private boolean waitForIFrame = true;
     private ByteBuffer[] buffers;
+
+    private boolean isRunning = false;
+
+    private int mFps = 0;
+    private Timer mTimer;
+    private TimerTask mTask;
 
     static {
         try {
@@ -91,11 +104,33 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
             Button btn_this = (Button) v;
 
             switch (v.getId()) {
+
                 case R.id.btn_ctrl_landing:
-                    if ((btn_this).getText() == getString(R.string.btn_landing))
-                        (btn_this).setText(R.string.btn_takeOff);
-                    else if ((btn_this).getText() == getString(R.string.btn_takeOff))
-                        (btn_this).setText(R.string.btn_landing);
+                    if(isRunning) {
+                        if ((btn_this).getText() == getString(R.string.btn_landing)) {
+                            //landing
+                            ARCONTROLLER_ERROR_ENUM error = bHelper.land();
+                            if (error != null) {
+                                if (!error.equals(ARCONTROLLER_ERROR_ENUM.ARCONTROLLER_OK))
+                                    Log.e(TAG, "Error while sending take off : " + error);
+                                else    //landing success
+                                    (btn_this).setText(R.string.btn_takeOff);
+                            } else {
+                                Log.e(TAG, "NULL!!!!!!");
+                            }
+                        } else if ((btn_this).getText() == getString(R.string.btn_takeOff)) {
+                            //take off
+                            ARCONTROLLER_ERROR_ENUM error = bHelper.takeoff();
+                            if (error != null) {
+                                if (!error.equals(ARCONTROLLER_ERROR_ENUM.ARCONTROLLER_OK))
+                                    Log.e(TAG, "Error while sending take off : " + error);
+                                else    //take off success
+                                    (btn_this).setText(R.string.btn_landing);
+                            } else {
+                                Log.e(TAG, "NULL!!!!!!");
+                            }
+                        }
+                    }
                     break;
                 case R.id.btn_server:
                    /* MyProgressDialog myProgressDialog;
@@ -120,6 +155,8 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
         Button btn_server = (Button) findViewById(R.id.btn_server);
         btn_server.setOnClickListener(btnClickListener);
 
+        final TextView text_streaming = (TextView) findViewById(R.id.text_streaming);
+
         sfView = (SurfaceView) findViewById(R.id.surface_stream);
 
         bHelper = new BebopHelper(this);
@@ -127,6 +164,23 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
         bHelper.initDiscoveryService();
 
         initVideoVars();
+
+        mTask = new TimerTask() {
+            @Override
+            public void run() {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        text_streaming.setText("Streaming : " + mFps + "fps");
+                        mFps = 0;
+                    }
+                });
+            }
+        };
+
+        //Update streaming frame rate
+        mTimer = new Timer();
+        mTimer.schedule(mTask, 1000, 1000);
     }
 
     @Override
@@ -211,10 +265,10 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
                     final TextView deviceState = (TextView) findViewById(R.id.txt_deviceStatus);
 
                     switch (arcontroller_device_state_enum)
-
                     {
                         case ARCONTROLLER_DEVICE_STATE_RUNNING:
                             deviceState.setText("RUNNING");
+                            isRunning = true;
                             break;
                         case ARCONTROLLER_DEVICE_STATE_STOPPED:
                             deviceState.setText("STOP");
@@ -243,19 +297,15 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
                             if (args != null) {
                                 Integer batValue = (Integer) args.get(ARFeatureCommon.ARCONTROLLER_DICTIONARY_KEY_COMMON_COMMONSTATE_BATTERYSTATECHANGED_PERCENT);
 
-
                                 // do what you want with the battery level
                                 Log.i(TAG, "Battery : " + batValue);
                             }
-                        } else if (arcontroller_dictionary_key_enum == ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_COMMON_COMMONSTATE_CURRENTTIMECHANGED) {
+                        } else if (arcontroller_dictionary_key_enum == ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_PILOTINGSTATE_FLYINGSTATECHANGED) {
                             ARControllerArgumentDictionary<Object> args = arControllerDictionary.get(ARControllerDictionary.ARCONTROLLER_DICTIONARY_SINGLE_KEY);
-
-                            if (args != null) {
-                                String batValue = (String) args.get(ARFeatureCommon.ARCONTROLLER_DICTIONARY_KEY_COMMON_COMMONSTATE_CURRENTTIMECHANGED_TIME);
-
-
-                                // do what you want with the battery level
-                                Log.i(TAG, "Time : " + batValue);
+                            if (args != null)
+                            {
+                                Integer flyingStateInt = (Integer) args.get(ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_PILOTINGSTATE_FLYINGSTATECHANGED_STATE);
+                                ARCOMMANDS_ARDRONE3_PILOTINGSTATE_FLYINGSTATECHANGED_STATE_ENUM flyingState = ARCOMMANDS_ARDRONE3_PILOTINGSTATE_FLYINGSTATECHANGED_STATE_ENUM.getFromValue(flyingStateInt);
                             }
                         }
                     } else {
@@ -303,7 +353,6 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
                                 } catch (IllegalStateException e) {
                                     Log.e(TAG, "Error while queue input buffer");
                                 }
-
                             } else {
                                 waitForIFrame = true;
                             }
@@ -323,17 +372,19 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
                             Log.e(TAG, "Error while dequeue input buffer (outIndex)");
                         }
                     }
-
-
                     readyLock.unlock();
+
+                    //change frame rate
+                    mFps ++;
                 }
 
                 @Override
                 public void onFrameTimeout(ARDeviceController arDeviceController) {
 
                 }
-
             });
+
+            isRunning = true;
         }
     }
 
