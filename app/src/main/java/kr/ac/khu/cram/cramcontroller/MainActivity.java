@@ -13,6 +13,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
@@ -69,6 +70,17 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
     private Timer mTimer;
     private TimerTask mTask;
 
+    // button vars
+    Button btn_go_up;
+    Button btn_go_down;
+    Button btn_go_front;
+    Button btn_go_back;
+    Button btn_turn_left;
+    Button btn_turn_right;
+
+    Button btn_landing;
+    Button btn_server;
+
     static {
         try {
             System.loadLibrary("arsal");
@@ -97,63 +109,10 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
         }
     }
 
-    View.OnClickListener btnClickListener = new View.OnClickListener() {
-        @Override
-        public void onClick(View v) {
-
-            Button btn_this = (Button) v;
-
-            switch (v.getId()) {
-
-                case R.id.btn_ctrl_landing:
-                    if(isRunning) {
-                        if ((btn_this).getText() == getString(R.string.btn_landing)) {
-                            //landing
-                            ARCONTROLLER_ERROR_ENUM error = bHelper.land();
-                            if (error != null) {
-                                if (!error.equals(ARCONTROLLER_ERROR_ENUM.ARCONTROLLER_OK))
-                                    Log.e(TAG, "Error while sending take off : " + error);
-                                else    //landing success
-                                    (btn_this).setText(R.string.btn_takeOff);
-                            } else {
-                                Log.e(TAG, "NULL!!!!!!");
-                            }
-                        } else if ((btn_this).getText() == getString(R.string.btn_takeOff)) {
-                            //take off
-                            ARCONTROLLER_ERROR_ENUM error = bHelper.takeoff();
-                            if (error != null) {
-                                if (!error.equals(ARCONTROLLER_ERROR_ENUM.ARCONTROLLER_OK))
-                                    Log.e(TAG, "Error while sending take off : " + error);
-                                else    //take off success
-                                    (btn_this).setText(R.string.btn_landing);
-                            } else {
-                                Log.e(TAG, "NULL!!!!!!");
-                            }
-                        }
-                    }
-                    break;
-                case R.id.btn_server:
-                   /* MyProgressDialog myProgressDialog;
-
-                    myProgressDialog = new MyProgressDialog();
-                    myProgressDialog.execute();*/
-                    Toast.makeText(MainActivity.this, "Start server", Toast.LENGTH_SHORT).show();
-                    new AsyncControllerGetter().execute();
-                    break;
-            }
-        }
-    };
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        Button btn_landing = (Button) findViewById(R.id.btn_ctrl_landing);
-        btn_landing.setOnClickListener(btnClickListener);
-
-        Button btn_server = (Button) findViewById(R.id.btn_server);
-        btn_server.setOnClickListener(btnClickListener);
 
         final TextView text_streaming = (TextView) findViewById(R.id.text_streaming);
 
@@ -164,6 +123,16 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
         bHelper.initDiscoveryService();
 
         initVideoVars();
+
+        //Add touch listener to direction keys
+        btn_turn_right = (Button) findViewById(R.id.btn_turn_right);
+        btn_turn_left = (Button) findViewById(R.id.btn_turn_left);
+        btn_go_front = (Button) findViewById(R.id.btn_go_front);
+        btn_go_back = (Button) findViewById(R.id.btn_go_back);
+        btn_go_up = (Button) findViewById(R.id.btn_go_up);
+        btn_go_down = (Button) findViewById(R.id.btn_go_down);
+
+        btn_turn_right.setOnTouchListener(directBtnTouchListener);
 
         mTask = new TimerTask() {
             @Override
@@ -183,6 +152,147 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
         mTimer.schedule(mTask, 1000, 1000);
     }
 
+
+    //Button Functions
+    public void btnStartServer(View v) {
+        /* MyProgressDialog myProgressDialog;
+
+                    myProgressDialog = new MyProgressDialog();
+                    myProgressDialog.execute();*/
+        Toast.makeText(MainActivity.this, "Start server", Toast.LENGTH_SHORT).show();
+        new AsyncControllerGetter().execute();
+    }
+
+    public void btnCtrlLanding(View v) {
+        Button btn_this = (Button) v;
+
+        if(isRunning) {
+            if (btn_this.getText() == getString(R.string.btn_landing)) {
+                //landing
+                ARCONTROLLER_ERROR_ENUM error = bHelper.land();
+                if (error != null) {
+                    if (!error.equals(ARCONTROLLER_ERROR_ENUM.ARCONTROLLER_OK))
+                        Log.e(TAG, "Error while sending take off : " + error);
+                    else    //landing success
+                        (btn_this).setText(R.string.btn_takeOff);
+                } else {
+                    Log.e(TAG, "NULL!!!!!!");
+                }
+            } else if ((btn_this).getText() == getString(R.string.btn_takeOff)) {
+                //take off
+                ARCONTROLLER_ERROR_ENUM error = bHelper.takeoff();
+                if (error != null) {
+                    if (!error.equals(ARCONTROLLER_ERROR_ENUM.ARCONTROLLER_OK))
+                        Log.e(TAG, "Error while sending take off : " + error);
+                    else    //take off success
+                        (btn_this).setText(R.string.btn_landing);
+                } else {
+                    Log.e(TAG, "NULL!!!!!!");
+                }
+            }
+        }
+    }
+
+    public View.OnTouchListener directBtnTouchListener = new View.OnTouchListener() {
+        public boolean onTouch(View v, MotionEvent event) {
+            if (isRunning) {
+                switch (v.getId()) {
+                    case R.id.btn_go_up:
+                        if(event.getAction() == MotionEvent.ACTION_DOWN) {
+                            try {
+                                //go up
+                                arController.getFeatureARDrone3().setPilotingPCMDFlag((byte) 0);
+                                arController.getFeatureARDrone3().setPilotingPCMDGaz((byte) 30);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        } else if (event.getAction() == MotionEvent.ACTION_UP) {
+                            //stop
+                            arController.getFeatureARDrone3().setPilotingPCMDFlag((byte) 0);
+                            arController.getFeatureARDrone3().setPilotingPCMDGaz((byte) 0);
+                        }
+                        break;
+                    case R.id.btn_go_down:
+                        if(event.getAction() == MotionEvent.ACTION_DOWN) {
+                            try {
+                                //go down
+                                arController.getFeatureARDrone3().setPilotingPCMDFlag((byte) 0);
+                                arController.getFeatureARDrone3().setPilotingPCMDGaz((byte) -30);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        } else if (event.getAction() == MotionEvent.ACTION_UP) {
+                            //stop
+                            arController.getFeatureARDrone3().setPilotingPCMDFlag((byte) 0);
+                            arController.getFeatureARDrone3().setPilotingPCMDGaz((byte) 0);
+                        }
+                        break;
+                    case R.id.btn_go_front:
+                        if(event.getAction() == MotionEvent.ACTION_DOWN) {
+                            try {
+                                //go forward
+                                arController.getFeatureARDrone3().setPilotingPCMDFlag((byte) 1);
+                                arController.getFeatureARDrone3().setPilotingPCMDPitch((byte) 30);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        } else if (event.getAction() == MotionEvent.ACTION_UP) {
+                            //stop
+                            arController.getFeatureARDrone3().setPilotingPCMDFlag((byte) 1);
+                            arController.getFeatureARDrone3().setPilotingPCMDPitch((byte) 0);
+                        }
+                        break;
+                    case R.id.btn_go_back:
+                        if(event.getAction() == MotionEvent.ACTION_DOWN) {
+                            try {
+                                //go backward
+                                arController.getFeatureARDrone3().setPilotingPCMDFlag((byte) 1);
+                                arController.getFeatureARDrone3().setPilotingPCMDPitch((byte) -30);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        } else if (event.getAction() == MotionEvent.ACTION_UP) {
+                            //stop
+                            arController.getFeatureARDrone3().setPilotingPCMDFlag((byte) 1);
+                            arController.getFeatureARDrone3().setPilotingPCMDPitch((byte) 0);
+                        }
+                        break;
+                    case R.id.btn_turn_left:
+                        if(event.getAction() == MotionEvent.ACTION_DOWN) {
+                            try {
+                                //turn left
+                                arController.getFeatureARDrone3().setPilotingPCMDFlag((byte) 0);
+                                arController.getFeatureARDrone3().setPilotingPCMDYaw((byte) -30);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        } else if (event.getAction() == MotionEvent.ACTION_UP) {
+                            //stop
+                            arController.getFeatureARDrone3().setPilotingPCMDFlag((byte) 0);
+                            arController.getFeatureARDrone3().setPilotingPCMDYaw((byte) 0);
+                        }
+                        break;
+                    case R.id.btn_turn_right:
+                        if(event.getAction() == MotionEvent.ACTION_DOWN) {
+                            try {
+                                //turn right
+                                arController.getFeatureARDrone3().setPilotingPCMDFlag((byte) 0);
+                                arController.getFeatureARDrone3().setPilotingPCMDYaw((byte) 30);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        } else if (event.getAction() == MotionEvent.ACTION_UP) {
+                            //stop
+                            arController.getFeatureARDrone3().setPilotingPCMDFlag((byte) 0);
+                            arController.getFeatureARDrone3().setPilotingPCMDYaw((byte) 0);
+                        }
+                        break;
+                }
+            }
+            return true;
+        }
+    };
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -193,7 +303,6 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 

@@ -53,7 +53,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/btn_server"
-            android:textSize="13sp" />
+            android:textSize="13sp"
+            android:onClick="btnStartServer"/>
 
         <Button style="@style/ButtonNoDefaultPadding"
             android:layout_width="match_parent"
@@ -101,7 +102,8 @@
         android:layout_centerVertical="true"
         android:layout_alignParentBottom="true"
         android:text="@string/btn_takeOff"
-        android:textStyle="bold"/>
+        android:textStyle="bold"
+        android:onClick="btnCtrlLanding"/>
 
     <RelativeLayout
         android:layout_width="wrap_content"
@@ -138,7 +140,7 @@
             android:layout_toRightOf="@id/btn_go_front"
             android:layout_centerVertical="true"
             android:text="@string/btn_right"
-            android:textSize="30sp" />
+            android:textSize="30sp"/>
 
         <Button
             android:id="@+id/btn_go_back"
